@@ -31,27 +31,7 @@ namespace AspNetCoreQuartzDemo
         {
             services.AddLogging();
 
-            #region Configure Quartz DI
-
-            const string jobGroupName = "group1";
-
-            services.Add(new ServiceDescriptor(typeof(IJob), typeof(DemoScheduledJob), ServiceLifetime.Transient));
-            services.AddSingleton<IJobFactory, ScheduledJobFactory>();
-            services.AddSingleton(provider => JobBuilder.Create<DemoScheduledJob>().WithIdentity("Sample.job", jobGroupName).Build());
-            services.AddSingleton(provider =>
-                TriggerBuilder.Create().WithIdentity("Sample.trigger", jobGroupName).StartNow()
-                    .WithSimpleSchedule(s => s.WithInterval(TimeSpan.FromSeconds(5)).RepeatForever()).Build());
-
-            services.AddSingleton(provider =>
-            {
-                var schedulerFactory = new StdSchedulerFactory();
-                var scheduler = schedulerFactory.GetScheduler().Result;
-                scheduler.JobFactory = provider.GetService<IJobFactory>();
-                scheduler.Start();
-                return scheduler;
-            });
-
-            #endregion
+            services.AddQuartz(typeof(DemoScheduledJob), "Sample.job", "group1");
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
         }
@@ -69,7 +49,7 @@ namespace AspNetCoreQuartzDemo
                 app.UseHsts();
             }
 
-            scheduler.ScheduleJob(app.ApplicationServices.GetService<IJobDetail>(), app.ApplicationServices.GetService<ITrigger>());
+            app.UseQuartz();
 
             app.UseHttpsRedirection();
             app.UseMvc();
